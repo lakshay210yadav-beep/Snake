@@ -1,0 +1,35 @@
+name: Build CarromBot APK
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract ZIP
+        run: |
+          ZIP=$(find . -maxdepth 2 -name "*.zip" | head -1)
+          if [ -n "$ZIP" ] && [ ! -f "settings.gradle" ]; then
+            unzip -o "$ZIP" -d /tmp/ex/
+            SETTINGS=$(find /tmp/ex -name "settings.gradle" | head -1)
+            cp -r "$(dirname $SETTINGS)"/. .
+          fi
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - uses: android-actions/setup-android@v3
+      - name: Install Gradle
+        run: |
+          wget -q https://services.gradle.org/distributions/gradle-8.2-bin.zip -O /tmp/g.zip
+          unzip -q /tmp/g.zip -d /opt/gradle
+          echo "/opt/gradle/gradle-8.2/bin" >> $GITHUB_PATH
+      - name: Build APK
+        run: gradle assembleDebug --no-daemon --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CarromBot-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
